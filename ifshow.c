@@ -124,4 +124,14 @@ int main(int argc, char *argv[]) {
 
     // Parse command line arguments
     if (strcmp(argv[1], "-i") == 0 && argc == 3) {
-        // Display IP addresses and subnet masks
+        // Display IP addresses and subnet masks for the specified interface
+        displayInterfaceInfo(argv[2]);
+    } else if (strcmp(argv[1], "-a") == 0 && argc == 2) {
+        // Display names, IP addresses, and subnet masks for all interfaces
+        displayAllInterfacesInfo();
+    } else {
+        displayUsage();
+    }
+
+    return 0;
+}
