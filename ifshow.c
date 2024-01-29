@@ -31,17 +31,34 @@ void displayInterfaceInfo(char *ifname) {
         if (ifa->ifa_addr->sa_family == AF_INET) {
             struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
             struct sockaddr_in *netmask = (struct sockaddr_in *)ifa->ifa_netmask;
-            printf("IPv4 Address: %s/%d\n", inet_ntoa(sa->sin_addr), netmask->sin_addr.s_addr);
+
+            // Count the number of leading 1s in the 32-bit netmask
+            int cidr = 0;
+            uint32_t mask = ntohl(netmask->sin_addr.s_addr);
+            while ((mask & 0x80000000) == 0x80000000) {
+                cidr++;
+                mask <<= 1;
+            }
+
+            printf("IPv4 Address: %s/%d\n", inet_ntoa(sa->sin_addr), cidr);
         } else if (ifa->ifa_addr->sa_family == AF_INET6) {
             struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)ifa->ifa_addr;
             char ip6[INET6_ADDRSTRLEN];
             inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
 
             struct sockaddr_in6 *netmask6 = (struct sockaddr_in6 *)ifa->ifa_netmask;
-            char mask6[INET6_ADDRSTRLEN];
-            inet_ntop(AF_INET6, &(netmask6->sin6_addr), mask6, INET6_ADDRSTRLEN);
 
-            printf("IPv6 Address: %s/%d\n", ip6, __builtin_popcountl(mask6));
+            // Count the number of leading 1s in each 16-bit block of the 128-bit netmask
+            int cidr6 = 0;
+            for (int i = 0; i < 8; i++) {
+                uint16_t block = ntohs(netmask6->sin6_addr.s6_addr16[i]);
+                while ((block & 0x8000) == 0x8000) {
+                    cidr6++;
+                    block <<= 1;
+                }
+            }
+
+            printf("IPv6 Address: %s/%d\n", ip6, cidr6);
         }
     }
 
@@ -66,17 +83,32 @@ void displayAllInterfacesInfo() {
         if (ifa->ifa_addr->sa_family == AF_INET) {
             struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
             struct sockaddr_in *netmask = (struct sockaddr_in *)ifa->ifa_netmask;
-            printf("IPv4 Address: %s/%d\n", inet_ntoa(sa->sin_addr), netmask->sin_addr.s_addr);
+
+            int cidr = 0;
+            uint32_t mask = ntohl(netmask->sin_addr.s_addr);
+            while ((mask & 0x80000000) == 0x80000000) {
+                cidr++;
+                mask <<= 1;
+            }
+
+            printf("IPv4 Address: %s/%d\n", inet_ntoa(sa->sin_addr), cidr);
         } else if (ifa->ifa_addr->sa_family == AF_INET6) {
             struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)ifa->ifa_addr;
             char ip6[INET6_ADDRSTRLEN];
             inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
 
             struct sockaddr_in6 *netmask6 = (struct sockaddr_in6 *)ifa->ifa_netmask;
-            char mask6[INET6_ADDRSTRLEN];
-            inet_ntop(AF_INET6, &(netmask6->sin6_addr), mask6, INET6_ADDRSTRLEN);
 
-            printf("IPv6 Address: %s/%d\n", ip6, __builtin_popcountl(mask6));
+            int cidr6 = 0;
+            for (int i = 0; i < 8; i++) {
+                uint16_t block = ntohs(netmask6->sin6_addr.s6_addr16[i]);
+                while ((block & 0x8000) == 0x8000) {
+                    cidr6++;
+                    block <<= 1;
+                }
+            }
+
+            printf("IPv6 Address: %s/%d\n", ip6, cidr6);
         }
 
         printf("\n");
@@ -92,14 +124,4 @@ int main(int argc, char *argv[]) {
 
     // Parse command line arguments
     if (strcmp(argv[1], "-i") == 0 && argc == 3) {
-        // Display IP addresses and subnet masks for the specified interface
-        displayInterfaceInfo(argv[2]);
-    } else if (strcmp(argv[1], "-a") == 0 && argc == 2) {
-        // Display names, IP addresses, and subnet masks for all interfaces
-        displayAllInterfacesInfo();
-    } else {
-        displayUsage();
-    }
-
-    return 0;
-}
+        // Display IP addresses and subnet masks
