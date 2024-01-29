@@ -10,12 +10,12 @@
 // Function to display usage information
 void displayUsage() {
     printf("Usage:\n");
-    printf("  ifshow -i ifname : Display IP addresses for the specified interface.\n");
-    printf("  ifshow -a        : Display names and IP addresses for all interfaces.\n");
+    printf("  ifshow -i ifname : Display IP addresses and subnet masks for the specified interface.\n");
+    printf("  ifshow -a        : Display names, IP addresses, and subnet masks for all interfaces.\n");
     exit(EXIT_FAILURE);
 }
 
-// Function to display IP addresses for a specific interface
+// Function to display IP addresses and subnet masks for a specific interface
 void displayInterfaceInfo(char *ifname) {
     struct ifaddrs *ifap, *ifa;
 
@@ -30,18 +30,25 @@ void displayInterfaceInfo(char *ifname) {
 
         if (ifa->ifa_addr->sa_family == AF_INET) {
             struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
-            printf("IPv4 Address: %s\n", inet_ntoa(sa->sin_addr));
+            struct sockaddr_in *netmask = (struct sockaddr_in *)ifa->ifa_netmask;
+            printf("IPv4 Address: %s/%d\n", inet_ntoa(sa->sin_addr), netmask->sin_addr.s_addr);
         } else if (ifa->ifa_addr->sa_family == AF_INET6) {
             struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)ifa->ifa_addr;
             char ip6[INET6_ADDRSTRLEN];
-            printf("IPv6 Address: %s\n", inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN));
+            inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
+
+            struct sockaddr_in6 *netmask6 = (struct sockaddr_in6 *)ifa->ifa_netmask;
+            char mask6[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &(netmask6->sin6_addr), mask6, INET6_ADDRSTRLEN);
+
+            printf("IPv6 Address: %s/%d\n", ip6, __builtin_popcountl(mask6));
         }
     }
 
     freeifaddrs(ifap);
 }
 
-// Function to display names and IP addresses for all interfaces
+// Function to display names, IP addresses, and subnet masks for all interfaces
 void displayAllInterfacesInfo() {
     struct ifaddrs *ifap, *ifa;
 
@@ -58,11 +65,18 @@ void displayAllInterfacesInfo() {
 
         if (ifa->ifa_addr->sa_family == AF_INET) {
             struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
-            printf("IPv4 Address: %s\n", inet_ntoa(sa->sin_addr));
+            struct sockaddr_in *netmask = (struct sockaddr_in *)ifa->ifa_netmask;
+            printf("IPv4 Address: %s/%d\n", inet_ntoa(sa->sin_addr), netmask->sin_addr.s_addr);
         } else if (ifa->ifa_addr->sa_family == AF_INET6) {
             struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)ifa->ifa_addr;
             char ip6[INET6_ADDRSTRLEN];
-            printf("IPv6 Address: %s\n", inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN));
+            inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
+
+            struct sockaddr_in6 *netmask6 = (struct sockaddr_in6 *)ifa->ifa_netmask;
+            char mask6[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &(netmask6->sin6_addr), mask6, INET6_ADDRSTRLEN);
+
+            printf("IPv6 Address: %s/%d\n", ip6, __builtin_popcountl(mask6));
         }
 
         printf("\n");
@@ -78,10 +92,10 @@ int main(int argc, char *argv[]) {
 
     // Parse command line arguments
     if (strcmp(argv[1], "-i") == 0 && argc == 3) {
-        // Display IP addresses for the specified interface
+        // Display IP addresses and subnet masks for the specified interface
         displayInterfaceInfo(argv[2]);
     } else if (strcmp(argv[1], "-a") == 0 && argc == 2) {
-        // Display names and IP addresses for all interfaces
+        // Display names, IP addresses, and subnet masks for all interfaces
         displayAllInterfacesInfo();
     } else {
         displayUsage();
